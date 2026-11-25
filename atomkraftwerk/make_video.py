@@ -651,8 +651,7 @@ def scene_outro(c, u):
 SCENES = [(0, 4), (4, 10), (10, 17), (17, 47), (47, 56)]
 
 
-def render(i):
-    t = i / FPS
+def draw(t):
     c = Canvas()
     if t < 4:
         scene_title(c, t)
@@ -664,6 +663,12 @@ def render(i):
         scene_schematic(c, t)
     else:
         scene_outro(c, t - 47)
+    return c
+
+
+def render(i):
+    t = i / FPS
+    c = draw(t)
     # Überblendung zu Schwarz an Szenengrenzen
     dark = 0.0
     for s, e in SCENES:
@@ -674,7 +679,55 @@ def render(i):
     return c.finish()
 
 
+# 8 Einzelclips (Name, Start, Ende in Sekunden des Gesamtvideos)
+CLIPS = [
+    ("01_kernspaltung", 4, 10),
+    ("02_kettenreaktion", 10, 17),
+    ("03_waerme_im_reaktor", 17.8, 23),
+    ("04_dampferzeuger", 23.8, 29),
+    ("05_strom_erzeugen", 29.8, 35),
+    ("06_kuehlung", 35.8, 41),
+    ("07_kreislauf", 41.8, 47),
+    ("08_zusammenfassung", 47, 56),
+]
+
+
+def render_clip(arg):
+    i, s, e = arg
+    t = s + i / FPS
+    c = draw(t)
+    dark = max(1 - ramp(t, s, s + 0.4), ramp(t, e - 0.4, e))
+    if dark > 0.003:
+        c.rect(0, 0, W, H, fill=(0, 0, 0, int(255 * dark)))
+    return c.finish()
+
+
+def encode(out, frames_iter):
+    ff = subprocess.Popen(
+        ["ffmpeg", "-y", "-loglevel", "error",
+         "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
+         "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+         "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-profile:v", "high",
+         "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "96k", "-shortest",
+         "-movflags", "+faststart", out],
+        stdin=subprocess.PIPE)
+    for b in frames_iter:
+        ff.stdin.write(b)
+    ff.stdin.close()
+    ff.wait()
+
+
 def main():
+    if "--clips" in sys.argv:
+        od = os.path.join(HERE, "clips")
+        os.makedirs(od, exist_ok=True)
+        with Pool(os.cpu_count() or 2) as p:
+            for name, s, e in CLIPS:
+                n = int(round((e - s) * FPS))
+                encode(os.path.join(od, name + ".mp4"),
+                       p.imap(render_clip, [(i, s, e) for i in range(n)], chunksize=4))
+                print("fertig:", name, flush=True)
+        return
     if "--stills" in sys.argv:
         secs = [float(x) for x in sys.argv[sys.argv.index("--stills") + 1:]]
         out = os.path.join(HERE, "stills")
