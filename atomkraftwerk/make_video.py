@@ -191,7 +191,6 @@ def caption(c, n, text, alpha=1.0):
     c.rect(50, 915, 1870, 1050, fill=(5, 12, 24, int(220 * alpha)),
            outline=(70, 100, 140, al), w=2, r=22)
     c.circle(118, 982, 40, fill=ACCENT + (al,))
-    c.text(118, 982, str(n), 44, (20, 30, 45, al), True, "mm")
     lines = wrap(text, 32, 1560)
     lh = 42
     y0 = 982 - lh * len(lines) / 2 + lh / 2
@@ -636,7 +635,6 @@ def scene_outro(c, u):
         c.rect(x0, y0, x0 + 840, y0 + 245, fill=(10, 24, 44, int(230 * al)),
                outline=(70, 110, 160, a255), w=2, r=24)
         c.circle(x0 + 62, y0 + 62, 36, fill=ACCENT + (a255,))
-        c.text(x0 + 62, y0 + 62, str(k + 1), 40, (20, 30, 45, a255), True, "mm")
         c.text(x0 + 120, y0 + 62, title, 36, (255, 255, 255, a255), True, "lm")
         for j, l in enumerate(wrap(body, 28, 760)):
             c.text(x0 + 40, y0 + 130 + j * 40, l, 28, (215, 228, 245, a255))
